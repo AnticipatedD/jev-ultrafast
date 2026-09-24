@@ -2,6 +2,7 @@
 
 import atexit
 import json
+import logging
 import os
 import secrets
 import threading
@@ -11,6 +12,14 @@ from urllib.parse import urlparse
 
 from .agent import Agent
 from .questions import MAX_STEPS
+
+# Configure structured, leveled logging immediately at module import time
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S"
+)
+logger = logging.getLogger("jev_ultrafast.demo")
 
 ROOT = Path(__file__).parent
 PORT = int(os.environ.get("TYPESAFE_DEMO_PORT", "8766"))
@@ -120,6 +129,8 @@ class Handler(BaseHTTPRequestHandler):
         except (ValueError, RuntimeError, TimeoutError) as error:
             self.send(400, json.dumps({"error": str(error)}))
         except Exception:
+            # Capture and trace the exact unhandled stack trace to stderr before resolving the status response
+            logger.exception("Unhandled demo request error")
             self.send(500, json.dumps({"error": "Local demo failed; no automatic retry. Reset to recover."}))
         finally:
             LOCK.release()
@@ -132,7 +143,7 @@ def main():
     load_environment()
     atexit.register(close_browser)
     server = ThreadingHTTPServer(("127.0.0.1", PORT), Handler)
-    print(f"Jev Ultrafast: {ORIGIN}", flush=True)
+    logger.info("Jev Ultrafast running on %s", ORIGIN)
     try:
         server.serve_forever()
     except KeyboardInterrupt:
