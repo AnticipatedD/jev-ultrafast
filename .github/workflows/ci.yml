@@ -38,10 +38,10 @@ jobs:
         run: uv run ruff check .
 
       - name: Run Pytest Suite
-        run: uv run pytest
-
-      - name: Validate JavaScript Syntax
         run: |
+          uv run pytest
+          uv run pytest tests/test_guards.py
+          
           node --check jev_ultrafast/static/app.js
           node --check jev_ultrafast/snapshot.js
 
