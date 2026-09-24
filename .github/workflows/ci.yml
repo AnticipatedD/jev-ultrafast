@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  test-and-audit:
+    name: Run Lint, Test, and Audit
+    runs-on: ubuntu-latest
+
+    steps:
+      # Pinning actions to specific release tags for reproducibility
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --all-extras --dev
+
+      - name: Run Ruff Linter
+        run: uv run ruff check .
+
+      - name: Run Pytest Suite
+        run: uv run pytest
+
+      - name: Validate JavaScript Syntax
+        run: |
+          node --check jev_ultrafast/static/app.js
+          node --check jev_ultrafast/snapshot.js
+
+      - name: Run Dependency Security Audit
+        run: |
+          uv pip install pip-audit
+          uv run pip-audit
